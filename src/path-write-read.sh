@@ -119,7 +119,8 @@ function write {
     local -r sz_chunk="${3}"
     local    count
 
-    do_dd "/dev/zero" "${path}" "${amount}" "${sz_chunk}"
+    do_dd "/dev/zero" "${path}" \
+        "${amount}" "${sz_chunk}" oflag="dsync"
 }
 
 function read {
@@ -129,7 +130,9 @@ function read {
     local    count
 
     if [ -e "${path}" ] ; then
-        do_dd "${path}" "/dev/null" "${amount}" "${sz_chunk}"
+        echo 3 > "/proc/sys/vm/drop_caches"
+        do_dd "${path}" "/dev/null" \
+                "${amount}" "${sz_chunk}" iflag="direct"
     else
         echo "ERROR:${0}:${LINENO}: Not found: '${path}'" >&2
         error_state="error"
@@ -141,6 +144,8 @@ function do_dd {
     local -r path_acceptor="${2}"
     local -r amount="${3}"
     local -r sz_chunk="${4}"
+    shift 4
+
     local    count
 
     test -n "${path_donor}"
@@ -154,9 +159,10 @@ function do_dd {
         dd if="${path_donor}" \
             of="${path_acceptor}" \
             bs="${sz_chunk}" \
-            count="${count}"
+            count="${count}" \
+            "${@}"
     else
-        echo dd if="${path_donor}" of="/dev/null"
+        echo dd if="${path_donor}" of="/dev/null" "${@}"
     fi
 }
 
